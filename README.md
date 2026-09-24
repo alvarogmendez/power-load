@@ -1,28 +1,59 @@
-This project contains the developed solution for the given challenge at https://github.com/gems-st-ib/powerplant-coding-challenge.
+# power-load — production plan by merit order
 
-Made by Alvaro Gonzalez Mendez.
+A small **REST API in Flask** that decides how much power each plant must produce to meet a given
+electrical load at the lowest cost. It is my solution to the
+[GEMS powerplant coding challenge](https://github.com/gems-st-ib/powerplant-coding-challenge) (2024).
 
-In order to execute the REST service you must:
+## How it works
 
-1. Make sure you have installed:
-    - Python (at least 3.10)
-    - Poetry (https://python-poetry.org/)
+1. **Cost per MWh** of every plant:
+   - gas-fired: gas price / efficiency, plus the CO₂ allowances (0.3 t per MWh);
+   - turbojet: kerosine price / efficiency;
+   - wind turbines: free, but their maximum output is `pmax × wind %`.
+2. **Merit order:** plants are sorted by cost per MWh (quicksort; on a tie the larger plant goes
+   first).
+3. **Dispatch:** the load is assigned in that order, each plant up to its maximum. If the next
+   plant cannot run below its minimum (`pmin`), the previous one is lowered so that the minimum
+   fits and the total still matches the load exactly.
 
-2. Get the latest version of the program cloning the repository:
+## Running it
 
-        git clone https://github.com/alvarogmendez/power-load
-        cd power-load
+Requires Python 3.10+ and [Poetry](https://python-poetry.org/).
 
-3. Use the following command on the project's path:
+```bash
+git clone https://github.com/alvarogmendez/power-load.git
+cd power-load
+poetry install
+poetry run python app.py          # listens on http://localhost:8888
+```
 
-        poetry install
+## Example
 
-4. Run the REST service using flask by executing the following command:
+```bash
+curl -X POST http://localhost:8888/productionplan \
+  -H "Content-Type: application/json" \
+  -d '{
+    "load": 480,
+    "fuels": {"gas(euro/MWh)": 13.4, "kerosine(euro/MWh)": 50.8, "co2(euro/ton)": 20, "wind(%)": 60},
+    "powerplants": [
+      {"name": "gasfiredbig1", "type": "gasfired", "efficiency": 0.53, "pmin": 100, "pmax": 460},
+      {"name": "gasfiredbig2", "type": "gasfired", "efficiency": 0.53, "pmin": 100, "pmax": 460},
+      {"name": "gasfiredsomewhatsmaller", "type": "gasfired", "efficiency": 0.37, "pmin": 40, "pmax": 210},
+      {"name": "tj1", "type": "turbojet", "efficiency": 0.3, "pmin": 0, "pmax": 16},
+      {"name": "windpark1", "type": "windturbine", "efficiency": 1, "pmin": 0, "pmax": 150},
+      {"name": "windpark2", "type": "windturbine", "efficiency": 1, "pmin": 0, "pmax": 36}
+    ]
+  }'
+```
 
-       poetry run python3 app.py 
+```json
+[{"name": "windpark1", "p": 90.0}, {"name": "windpark2", "p": 21.6},
+ {"name": "gasfiredbig2", "p": 368.4}, {"name": "gasfiredbig1", "p": 0},
+ {"name": "gasfiredsomewhatsmaller", "p": 0}, {"name": "tj1", "p": 0}]
+```
 
-In order to make a Request the user must POST to 
+The CO₂ cost can be switched off with `co2_active = False` in `app.py`.
 
-    localhost:8888/productionplan 
+## Author
 
-with the desired payload as the body of the request.
+Álvaro González Méndez — [alvarogmendez.es](https://alvarogmendez.es) · [LinkedIn](https://www.linkedin.com/in/alvarogmendez/)
