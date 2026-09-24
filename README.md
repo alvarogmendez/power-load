@@ -10,7 +10,7 @@ In order to execute the REST service you must:
 
 2. Get the latest version of the program cloning the repository:
 
-        git clone https://github.com/itsTwoFive/power-load
+        git clone https://github.com/alvarogmendez/power-load
         cd power-load
 
 3. Use the following command on the project's path:
